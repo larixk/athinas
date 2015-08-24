@@ -63,8 +63,6 @@ function walk(w) {
 
 function drawWalker(w) {
   ctx.fillStyle = w.color;
-  var halfWidth = canvas.width / 2;
-  var halfHeight = canvas.height / 2;
   var x = w.x,
     y = w.y;
 
