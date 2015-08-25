@@ -1,16 +1,7 @@
 var NUM_WALKERS = 50;
 var TIMES_PER_FRAME = 4;
 
-var palette = [];
-for (var i = 0; i < 3; i++) {
-  var r = Math.floor(235 * Math.random());
-  var g = Math.floor(235 * Math.random());
-  var b = Math.floor(235 * Math.random());
-  palette.push('rgba(' + r + ',' + g + ',' + b + ', ' + 1 + ')');
-  // palette.push('rgba(' + g + ',' + b + ',' + r + ', ' + 1 + ')');
-  // palette.push('rgba(' + b + ',' + r + ',' + g + ', ' + 1 + ')');
-  palette.push('rgba(' + (r + 20) + ',' + (g + 20) + ',' + (b + 20) + ', ' + 1 + ')');
-}
+var palette;
 
 var canvas = document.querySelector('#canvas');
 
@@ -27,6 +18,19 @@ function resize() {
 
   ctx.fillStyle = palette[0];
   ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+
+function createPalette() {
+  palette = [];
+  for (var i = 0; i < 3; i++) {
+    var r = Math.floor(235 * Math.random());
+    var g = Math.floor(235 * Math.random());
+    var b = Math.floor(235 * Math.random());
+    palette.push('rgba(' + r + ',' + g + ',' + b + ', ' + 1 + ')');
+    // palette.push('rgba(' + g + ',' + b + ',' + r + ', ' + 1 + ')');
+    // palette.push('rgba(' + b + ',' + r + ',' + g + ', ' + 1 + ')');
+    palette.push('rgba(' + (r + 20) + ',' + (g + 20) + ',' + (b + 20) + ', ' + 1 + ')');
+  }
 }
 
 function createWalker(randomPos) {
@@ -147,12 +151,15 @@ function tick() {
 }
 
 function init() {
+  createPalette();
   resize();
   for (var i = 0; i < NUM_WALKERS; i++) {
     createWalker(true);
   }
   tick();
 }
+
+setInterval(createPalette, 10000);
 
 function sample(array) {
   var index = Math.floor(Math.random() * array.length);
