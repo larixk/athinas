@@ -12,7 +12,7 @@
 
   var growFromCenter = false;
 
-  var walkersPerPixel = 1 / 40000;
+  var walkersPerPixel = 1 / 20000;
 
   var circleMargin = 75;
   var LIFE_MARGIN = -50;
@@ -27,8 +27,8 @@
   var survivors = [];
 
   function resize() {
-    canvas.height = window.innerHeight - 20;
-    canvas.width = window.innerWidth - 20;
+    canvas.height = Math.min(window.innerWidth, window.innerHeight) - 20;
+    canvas.width = Math.min(window.innerWidth, window.innerHeight) - 20;
     NUM_WALKERS = canvas.width * canvas.height * walkersPerPixel;
 
     ctx.beginPath();
@@ -83,7 +83,10 @@
     var size = 5 + Math.pow(Math.random(), 3) * 30;
 
     if (paletteIndex === 0) {
-      size *= 1.25;
+      size *= 2;
+    }
+    if (mousedown) {
+      size = 1;
     }
 
     var walker = {
@@ -121,7 +124,7 @@
     var ddirection = w.ddirection;
 
     if (mousecoords) {
-      ddirection *= 1 * (1 - Math.abs(mousecoords.x / (canvas.width / 2) - 1));
+      ddirection *= 1 * (1 - Math.abs(mousecoords.x / (window.innerWidth / 2) - 1));
     }
 
     w.direction += ddirection;
@@ -200,7 +203,7 @@
     var scale = -0;
     var rotate = 0;
     var translateY = 0;
-    var fade = mousecoords ? (3 * (-0.75 + 1 * (1 - Math.abs(mousecoords.y / (canvas.height / 2) - 1)))) : 0;
+    var fade = mousecoords ? (3 * (-0.75 + 1 * (1 - Math.abs(mousecoords.y / (window.innerHeight / 2) - 1)))) : 0;
 
     if (fade > 0) {
       ctx.fillStyle = 'rgba(245,245,245, ' + fade + ')';
