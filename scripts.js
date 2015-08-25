@@ -1,7 +1,21 @@
-var NUM_WALKERS = 50;
-var TIMES_PER_FRAME = 4;
+var NUM_WALKERS = 80;
+var TIMES_PER_FRAME = 1;
 
-var palette;
+var paletteSize = 2;
+var colorVariance = 30;
+var colorVarianceCount = 12;
+var paletteInterval = 9000;
+var opacity = 0.8;
+var monochrome = false;
+
+var growFromCenter = false;
+
+var walkersPerPixel = 1 / 10000;
+
+var circleMargin = 125;
+var LIFE_MARGIN = 0;
+
+var palette, backgroundColor;
 
 var canvas = document.querySelector('#canvas');
 
@@ -15,25 +29,45 @@ init();
 function resize() {
   canvas.height = window.innerHeight - 20;
   canvas.width = window.innerWidth - 20;
+  NUM_WALKERS = canvas.width * canvas.height * walkersPerPixel;
 
-  ctx.fillStyle = palette[0];
+  ctx.beginPath();
+  ctx.arc(
+    canvas.width / 2,
+    canvas.height / 2,
+    (Math.min(canvas.height, canvas.width) / 2) - circleMargin, 0, 2 * Math.PI);
+  ctx.clip();
+
+  ctx.fillStyle = backgroundColor;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 }
 
 function createPalette() {
+  backgroundColor = "#eee";
   palette = [];
-  for (var i = 0; i < 3; i++) {
-    var r = Math.floor(235 * Math.random());
-    var g = Math.floor(235 * Math.random());
-    var b = Math.floor(235 * Math.random());
-    palette.push('rgba(' + r + ',' + g + ',' + b + ', ' + 1 + ')');
-    // palette.push('rgba(' + g + ',' + b + ',' + r + ', ' + 1 + ')');
-    // palette.push('rgba(' + b + ',' + r + ',' + g + ', ' + 1 + ')');
-    palette.push('rgba(' + (r + 20) + ',' + (g + 20) + ',' + (b + 20) + ', ' + 1 + ')');
+  for (var i = 0; i < paletteSize; i++) {
+
+    var maxValue = 255;
+    if (colorVariance > 1) {
+      maxValue /= colorVariance;
+    }
+    var r = Math.floor(maxValue * Math.random());
+    var g = Math.floor(maxValue * Math.random());
+    var b = Math.floor(maxValue * Math.random());
+
+    if (monochrome) {
+      r = g = b;
+    }
+
+    for (var cv = 0; cv < colorVarianceCount; cv++) {
+      var currentVariance = 1 + (colorVariance - 1) * (cv / colorVarianceCount);
+      palette.push('rgba(' + Math.floor(r * currentVariance) + ',' + Math.floor(g * currentVariance) + ',' + Math.floor(b * currentVariance) + ', ' + opacity + ')');
+    }
   }
 }
 
 function createWalker(randomPos) {
+  randomPos = !growFromCenter;
   var color = sample(palette);
   var walker = {
     x: randomPos ? canvas.width * Math.random() : canvas.width * 0.5,
@@ -41,8 +75,10 @@ function createWalker(randomPos) {
     direction: Math.random() * Math.PI * 2,
     ddirection: (Math.random() - 0.5) / 2,
     color: color,
-    size: 5 + Math.pow(Math.random(), 10) * 20,
-    dsize: 0.97 + 0.025 * Math.random()
+    size: 3 + Math.pow(Math.random(), 3) * 20,
+    dsize: 0.91 + 0.08 * Math.pow(Math.random(), 4),
+    force: 0.5 + 0.5 * Math.random(),
+    symmetrical: 2
   };
   walkers.push(walker);
 }
@@ -53,7 +89,8 @@ function walk(w) {
   if (w.size <= 0.5) {
     return;
   }
-  w.speed = w.size / 2;
+  w.speed = 1 + w.size / 2;
+  w.speed *= w.force;
 
   if (mousedown) {
     w.size *= 1.05;
@@ -64,13 +101,10 @@ function walk(w) {
     w.ddirection = -w.ddirection;
   }
 
-  var ddirection = w.ddirection
+  var ddirection = w.ddirection;
 
   if (mousecoords) {
     ddirection *= 1 * (1 - Math.abs(mousecoords.x / (canvas.width / 2) - 1));
-    w.speed *= 0.25 + 0.75 * (1 - Math.abs(mousecoords.y / (canvas.height / 2) - 1));
-    // w.y += (mousecoords.y) * 0.001;
-    //
   }
 
   w.direction += ddirection;
@@ -81,10 +115,10 @@ function walk(w) {
   w.x += dx;
   w.y += dy;
 
-  if (w.x < 0 || w.x > canvas.width) {
+  if (w.x < -LIFE_MARGIN || w.x > canvas.width + LIFE_MARGIN) {
     return;
   }
-  if (w.y < 0 || w.y > canvas.height) {
+  if (w.y < -LIFE_MARGIN || w.y > canvas.height + LIFE_MARGIN) {
     return;
   }
 
@@ -92,37 +126,30 @@ function walk(w) {
 }
 
 function drawWalker(w) {
+  function drawCircle(x,y,size) {
+    ctx.beginPath();
+    ctx.arc(
+      x,
+      y,
+      size, 0, 2 * Math.PI);
+    ctx.fill();
+
+  }
   ctx.fillStyle = w.color;
   var x = w.x,
     y = w.y;
+  drawCircle(x,y,w.size);
 
-  ctx.beginPath();
-  ctx.arc(
-    x,
-    y,
-    w.size, 0, 2 * Math.PI);
-  ctx.fill();
+  if (w.symmetrical < 1) {
+    return;
+  }
+  drawCircle(canvas.width - x,y,w.size);
+  if (w.symmetrical < 2) {
+    return;
+  }
 
-  ctx.beginPath();
-  ctx.arc(
-    x,
-    canvas.height - y,
-    w.size, 0, 2 * Math.PI);
-  ctx.fill();
-
-  ctx.beginPath();
-  ctx.arc(
-    canvas.width - x,
-    y,
-    w.size, 0, 2 * Math.PI);
-  ctx.fill();
-
-  ctx.beginPath();
-  ctx.arc(
-    canvas.width - x,
-    canvas.height - y,
-    w.size, 0, 2 * Math.PI);
-  ctx.fill();
+  drawCircle(x,canvas.height - y,w.size);
+  drawCircle(canvas.width - x,canvas.height - y,w.size);
 
 }
 
@@ -142,11 +169,36 @@ function draw() {
   walkers.forEach(drawWalker);
 }
 
+function postProcess() {
+  var scale = 0;
+  var rotate = 0;
+  var translateY = 0;
+  var fade = mousecoords ? (3* (-0.75 + 1 * (1 - Math.abs(mousecoords.y / (canvas.height / 2) - 1)))) : 0;
+
+  if (fade > 0) {
+    ctx.fillStyle = 'rgba(245,245,245, ' + fade + ')';
+    ctx.fillRect(0,0, canvas.width, canvas.height);
+  }
+
+  if (scale === 0 && rotate === 0 & translateY === 0) {
+    return;
+  }
+  ctx.save();
+  ctx.translate(canvas.width / 2, canvas.height / 2);
+  ctx.rotate(rotate);
+  ctx.translate(-canvas.width / 2, -canvas.height / 2);
+  ctx.drawImage(canvas, -0.5 * scale, -0.5 * scale + translateY,canvas.width + scale,canvas.height + scale);
+  ctx.restore();
+}
+
 function tick() {
   for (var i = 0; i < TIMES_PER_FRAME; i++) {
     update();
     draw();
   }
+
+  postProcess();
+
   requestAnimationFrame(tick);
 }
 
@@ -157,9 +209,9 @@ function init() {
     createWalker(true);
   }
   tick();
+  setInterval(createPalette, paletteInterval);
 }
 
-setInterval(createPalette, 10000);
 
 function sample(array) {
   var index = Math.floor(Math.random() * array.length);
@@ -182,3 +234,16 @@ window.addEventListener('mousemove', function(event) {
 window.addEventListener('resize', function(event) {
   resize();
 });
+
+
+// var mask = document.querySelector("#mask");
+// mask.width = canvas.width;
+// mask.height = canvas.height;
+// var maskCtx = mask.getContext("2d");
+
+//     maskCtx.beginPath();
+//     maskCtx.arc(
+//       0,
+//       0,
+//       canvas.width, 0, 2 * Math.PI);
+//     maskCtx.fill();
