@@ -1,7 +1,6 @@
 (function() {
   'use strict';
-  var NUM_WALKERS;
-  var TIMES_PER_FRAME = 1;
+  var numWalkers;
 
   var paletteSize = 2;
   var colorVariance = 15;
@@ -14,10 +13,8 @@
 
   var walkersPerPixel = 1 / 20000;
 
-  var circleMargin = 75;
-  var LIFE_MARGIN = -50;
-
-  var palette, backgroundColor;
+  var palette;
+  var backgroundColor;
 
   var canvas = document.querySelector('#canvas');
 
@@ -26,31 +23,18 @@
   var walkers = [];
   var survivors = [];
 
-  function resize() {
-    canvas.height = Math.min(window.innerWidth, window.innerHeight) - 20;
-    canvas.width = Math.min(window.innerWidth, window.innerHeight) - 20;
-    NUM_WALKERS = canvas.width * canvas.height * walkersPerPixel;
-
-    ctx.beginPath();
-    ctx.arc(
-      canvas.width / 2,
-      canvas.height / 2, (Math.min(canvas.height, canvas.width) / 2) - circleMargin, 0, 2 * Math.PI);
-    ctx.clip();
-
-    ctx.fillStyle = backgroundColor;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-  }
-
   function createPalette() {
     backgroundColor = 'rgba(245,245,245,1)';
     palette = [];
     palette.push('rgba(245,245,245,' + opacity + ')');
-    for (var i = 0; i < paletteSize; i++) {
 
+    for (var i = 0; i < paletteSize; i++) {
       var maxValue = 255;
+
       if (colorVariance > 1) {
         maxValue /= colorVariance;
       }
+
       var r = Math.floor(maxValue * Math.random());
       var g = Math.floor(maxValue * Math.random());
       var b = Math.floor(maxValue * Math.random());
@@ -60,11 +44,33 @@
       }
 
       for (var cv = 0; cv < colorVarianceCount; cv++) {
-        var currentVariance = 1 + (colorVariance - 1) * (cv / colorVarianceCount);
-        palette.push('rgba(' + Math.floor(r * currentVariance) + ',' + Math.floor(g * currentVariance) + ',' + Math.floor(
-          b * currentVariance) + ', ' + opacity + ')');
+        var currentV = 1 + (colorVariance - 1) * (cv / colorVarianceCount);
+        var currentR = Math.floor(r * currentV);
+        var currentG = Math.floor(g * currentV);
+        var currentB = Math.floor(b * currentV);
+        palette.push('rgba(' + currentR + ',' + currentG + ',' + currentB + ', ' + opacity + ')');
       }
     }
+  }
+
+  function resize() {
+    var size = Math.min(window.innerWidth, window.innerHeight) - 20;
+    canvas.height = size;
+    canvas.width = size;
+    numWalkers = size * size * walkersPerPixel;
+
+    var circleMargin = size / 16;
+
+    ctx.beginPath();
+    ctx.arc(
+      size / 2,
+      size / 2,
+      size / 2 - circleMargin,
+      0, 2 * Math.PI);
+    ctx.clip();
+
+    ctx.fillStyle = backgroundColor;
+    ctx.fillRect(0, 0, size, size);
   }
 
   function cloneWalker(walker) {
@@ -76,9 +82,10 @@
     return newWalker;
   }
 
-  function createWalker(randomPos) {
+  function createWalker() {
+    var randomPos = !growFromCenter;
+
     var paletteIndex = Math.floor(Math.random() * palette.length);
-    randomPos = !growFromCenter;
     var color = palette[paletteIndex];
     var size = 5 + Math.pow(Math.random(), 3) * 30;
 
@@ -135,63 +142,63 @@
     w.x += dx;
     w.y += dy;
 
-    if (w.x < -LIFE_MARGIN || w.x > canvas.width + LIFE_MARGIN) {
+    if (w.x < 0 || w.x > canvas.width) {
       return;
     }
-    if (w.y < -LIFE_MARGIN || w.y > canvas.height + LIFE_MARGIN) {
+    if (w.y < 0 || w.y > canvas.height) {
       return;
     }
 
     survivors.push(w);
   }
 
-  function drawWalker(w) {
-    function drawCircle(x, y, size) {
-      ctx.beginPath();
-      ctx.arc(
-        x,
-        y,
-        size, 0, 2 * Math.PI);
-      ctx.fill();
+  function drawCircle(x, y, size) {
+    ctx.beginPath();
+    ctx.arc(
+      x,
+      y,
+      size, 0, 2 * Math.PI);
+    ctx.fill();
+  }
 
-    }
+  function drawWalker(w) {
     ctx.fillStyle = w.color;
-    var x = w.x,
-      y = w.y;
+    var x = w.x;
+    var y = w.y;
     drawCircle(x, y, w.size);
 
     if (w.symmetrical < 1) {
       return;
     }
     drawCircle(canvas.width - x, y, w.size);
+
     if (w.symmetrical < 2) {
       return;
     }
 
     drawCircle(x, canvas.height - y, w.size);
     drawCircle(canvas.width - x, canvas.height - y, w.size);
-
   }
 
   function update() {
     survivors = [];
     walkers.forEach(walk);
 
-    var casualties = NUM_WALKERS - survivors.length;
+    var casualties = numWalkers - survivors.length;
     walkers = survivors;
 
     for (var i = 0; i < casualties; i++) {
       if (Math.random() < 0.5) {
         createWalker(true);
-      } else {
-        var walker = cloneWalker(walkers[Math.floor(Math.random() * walkers.length)]);
-        if (!walker) {
-          createWalker(true);
-          continue;
-        }
-        walker.direction += Math.PI * 2 * (Math.random() - 0.5);
-        walker.size *= Math.random();
+        continue;
       }
+      var walker = cloneWalker(walkers[Math.floor(Math.random() * walkers.length)]);
+      if (!walker) {
+        createWalker(true);
+        continue;
+      }
+      walker.direction += Math.PI * 2 * (Math.random() - 0.5);
+      walker.size *= Math.random();
     }
   }
 
@@ -200,32 +207,17 @@
   }
 
   function postProcess() {
-    var scale = -0;
-    var rotate = 0;
-    var translateY = 0;
     var fade = mousecoords ? (3 * (-0.75 + 1 * (1 - Math.abs(mousecoords.y / (window.innerHeight / 2) - 1)))) : 0;
 
     if (fade > 0) {
       ctx.fillStyle = 'rgba(245,245,245, ' + fade + ')';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
-
-    if (scale === 0 && rotate === 0 & translateY === 0) {
-      return;
-    }
-    ctx.save();
-    ctx.translate(canvas.width / 2, canvas.height / 2);
-    ctx.rotate(rotate);
-    ctx.translate(-canvas.width / 2, -canvas.height / 2);
-    ctx.drawImage(canvas, -0.5 * scale, -0.5 * scale + translateY, canvas.width + scale, canvas.height + scale);
-    ctx.restore();
   }
 
   function tick() {
-    for (var i = 0; i < TIMES_PER_FRAME; i++) {
-      update();
-      draw();
-    }
+    update();
+    draw();
 
     postProcess();
 
@@ -235,7 +227,7 @@
   function init() {
     createPalette();
     resize();
-    for (var i = 0; i < NUM_WALKERS; i++) {
+    for (var i = 0; i < numWalkers; i++) {
       createWalker(true);
     }
     tick();
@@ -244,7 +236,8 @@
 
   init();
 
-  var mousedown, mousecoords;
+  var mousedown;
+  var mousecoords;
   window.addEventListener('mousedown', function() {
     mousedown = true;
   });
