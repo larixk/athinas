@@ -54,12 +54,24 @@
   }
 
   function resize() {
-    var size = Math.min(window.innerWidth, window.innerHeight) - 20;
-    canvas.height = size;
-    canvas.width = size;
-    numWalkers = size * size * walkersPerPixel;
+    var hasCircle = window.innerWidth > 640;
+    var size;
+    if (hasCircle) {
+      size = Math.min(window.innerWidth, window.innerHeight) - 20;
+      canvas.height = size;
+      canvas.width = size;
+    } else {
+      canvas.width = window.innerWidth - 20;
+      canvas.height = window.innerHeight - 20;
+    }
 
-    var circleMargin = size / 16;
+    numWalkers = canvas.height * canvas.width * walkersPerPixel;
+
+    if (!hasCircle) {
+      return;
+    }
+
+    var circleMargin = Math.max(40, size / 16);
 
     ctx.beginPath();
     ctx.arc(
