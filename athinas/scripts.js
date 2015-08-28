@@ -1,59 +1,65 @@
 (function() {
   'use strict';
-  var numWalkers;
 
-  var paletteSize = 2;
-  var colorVariance = 15;
-  var colorVarianceCount = 5;
-  var paletteInterval = 24000;
-  var opacity = 0.75;
-  var monochrome = false;
+  var PALETTE_SIZE = 2;
+  var COLOR_VARIANCE = 15;
+  var COLOR_VARIANCE_COUNT = 5;
+  var PALETTE_INTERVAL = 24000;
+  var BRUSH_OPACITY = 0.75;
+  var MONOCHROME = false;
 
-  var growFromCenter = false;
+  var GROW_FROM_CENTER = false;
 
-  var walkersPerPixel = 1 / 20000;
+  var WALKERS_PER_PIXEL = 1 / 20000;
 
   var palette;
   var backgroundColor;
 
   var canvas = document.querySelector('#canvas');
-
   var ctx = canvas.getContext('2d');
+  var needsResizing = true;
 
+  var numWalkers;
   var walkers = [];
   var survivors = [];
+
+  var floor = Math.floor;
+  var rand = Math.random;
+  var TWO_PI = Math.PI * 2;
 
   function createPalette() {
     backgroundColor = 'rgba(245,245,245,1)';
     palette = [];
-    palette.push('rgba(245,245,245,' + opacity + ')');
+    palette.push('rgba(245,245,245,' + BRUSH_OPACITY + ')');
 
-    for (var i = 0; i < paletteSize; i++) {
+    for (var i = 0; i < PALETTE_SIZE; i++) {
       var maxValue = 255;
 
-      if (colorVariance > 1) {
-        maxValue /= colorVariance;
+      if (COLOR_VARIANCE > 1) {
+        maxValue /= COLOR_VARIANCE;
       }
 
-      var r = Math.floor(maxValue * Math.random());
-      var g = Math.floor(maxValue * Math.random());
-      var b = Math.floor(maxValue * Math.random());
+      var r = floor(maxValue * rand());
+      var g = floor(maxValue * rand());
+      var b = floor(maxValue * rand());
 
-      if (monochrome) {
+      if (MONOCHROME) {
         r = g = b;
       }
 
-      for (var cv = 0; cv < colorVarianceCount; cv++) {
-        var currentV = 1 + (colorVariance - 1) * (cv / colorVarianceCount);
-        var currentR = Math.floor(r * currentV);
-        var currentG = Math.floor(g * currentV);
-        var currentB = Math.floor(b * currentV);
-        palette.push('rgba(' + currentR + ',' + currentG + ',' + currentB + ', ' + opacity + ')');
+      for (var cv = 0; cv < COLOR_VARIANCE_COUNT; cv++) {
+        var currentV = 1 + (COLOR_VARIANCE - 1) * (cv / COLOR_VARIANCE_COUNT);
+        var currentR = floor(r * currentV);
+        var currentG = floor(g * currentV);
+        var currentB = floor(b * currentV);
+        palette.push('rgba(' + currentR + ',' + currentG + ',' + currentB + ', ' + BRUSH_OPACITY + ')');
       }
     }
   }
 
   function resize() {
+    needsResizing = false;
+
     var hasCircle = window.innerWidth > 640;
     var size;
     if (hasCircle) {
@@ -65,7 +71,7 @@
       canvas.height = window.innerHeight - 20;
     }
 
-    numWalkers = canvas.height * canvas.width * walkersPerPixel;
+    numWalkers = canvas.height * canvas.width * WALKERS_PER_PIXEL;
 
     if (!hasCircle) {
       return;
@@ -78,7 +84,7 @@
       size / 2,
       size / 2,
       size / 2 - circleMargin,
-      0, 2 * Math.PI);
+      0, TWO_PI);
     ctx.clip();
 
     ctx.fillStyle = backgroundColor;
@@ -95,11 +101,11 @@
   }
 
   function createWalker() {
-    var randomPos = !growFromCenter;
+    var randomPos = !GROW_FROM_CENTER;
 
-    var paletteIndex = Math.floor(Math.random() * palette.length);
+    var paletteIndex = floor(rand() * palette.length);
     var color = palette[paletteIndex];
-    var size = 5 + Math.pow(Math.random(), 3) * 30;
+    var size = 5 + Math.pow(rand(), 3) * 30;
 
     if (paletteIndex === 0) {
       size *= 2;
@@ -109,15 +115,15 @@
     }
 
     var walker = {
-      x: randomPos ? canvas.width * Math.random() : canvas.width * 0.5,
-      y: randomPos ? canvas.height * Math.random() : canvas.height * 0.5,
-      direction: Math.random() * Math.PI * 2,
-      ddirection: (Math.random() - 0.5) / 2,
+      x: randomPos ? canvas.width * rand() : canvas.width * 0.5,
+      y: randomPos ? canvas.height * rand() : canvas.height * 0.5,
+      direction: rand() * TWO_PI,
+      ddirection: (rand() - 0.5) / 2,
       color: color,
       size: size,
-      dsize: 0.91 + 0.08 * Math.pow(Math.random(), 4),
-      force: 0.5 + 0.5 * Math.random(),
-      symmetrical: 1 + Math.random() * 4
+      dsize: 0.91 + 0.08 * Math.pow(rand(), 4),
+      force: 0.5 + 0.5 * rand(),
+      symmetrical: 1 + rand() * 4
     };
     walkers.push(walker);
   }
@@ -136,7 +142,7 @@
       w.size = Math.min(w.size, 10);
     }
 
-    if (Math.random() < 0.1) {
+    if (rand() < 0.1) {
       w.ddirection = -w.ddirection;
     }
 
@@ -169,7 +175,7 @@
     ctx.arc(
       x,
       y,
-      size, 0, 2 * Math.PI);
+      size, 0, TWO_PI);
     ctx.fill();
   }
 
@@ -200,17 +206,17 @@
     walkers = survivors;
 
     for (var i = 0; i < casualties; i++) {
-      if (Math.random() < 0.5) {
+      if (rand() < 0.5) {
         createWalker(true);
         continue;
       }
-      var walker = cloneWalker(walkers[Math.floor(Math.random() * walkers.length)]);
+      var walker = cloneWalker(walkers[floor(rand() * walkers.length)]);
       if (!walker) {
         createWalker(true);
         continue;
       }
-      walker.direction += Math.PI * 2 * (Math.random() - 0.5);
-      walker.size *= Math.random();
+      walker.direction += TWO_PI * (rand() - 0.5);
+      walker.size *= rand();
     }
   }
 
@@ -228,6 +234,9 @@
   }
 
   function tick() {
+    if (needsResizing) {
+      resize();
+    }
     update();
     draw();
 
@@ -243,26 +252,27 @@
       createWalker(true);
     }
     tick();
-    setInterval(createPalette, paletteInterval);
+    setInterval(createPalette, PALETTE_INTERVAL);
   }
 
   init();
 
   var mousedown;
   var mousecoords;
-  window.addEventListener('mousedown', function() {
+  var addEventListener = window.addEventListener;
+  addEventListener('mousedown', function() {
     mousedown = true;
   });
-  window.addEventListener('mouseup', function() {
+  addEventListener('mouseup', function() {
     mousedown = false;
   });
-  window.addEventListener('mousemove', function(event) {
+  addEventListener('mousemove', function(event) {
     mousecoords = {
       x: event.pageX,
       y: event.pageY
     };
   });
-  window.addEventListener('resize', function() {
-    resize();
+  addEventListener('resize', function() {
+    needsResizing = true;
   });
 })();
