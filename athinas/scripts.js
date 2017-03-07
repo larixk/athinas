@@ -19,6 +19,8 @@
   var ctx = canvas.getContext('2d');
   var needsResizing = true;
 
+  var scale = window.devicePixelRatio || 1;
+
   var numWalkers;
   var walkers = [];
   var survivors = [];
@@ -64,11 +66,14 @@
     var size;
     if (hasCircle) {
       size = Math.min(window.innerWidth, window.innerHeight) - 20;
+      size *= scale;
       canvas.height = size;
       canvas.width = size;
+      canvas.style.width = size / scale + 'px';
+      canvas.style.height = size / scale + 'px';
     } else {
-      canvas.width = window.innerWidth - 20;
-      canvas.height = window.innerHeight - 20;
+      canvas.width = window.innerWidth * scale - 20;
+      canvas.height = window.innerHeight * scale - 20;
     }
 
     numWalkers = canvas.height * canvas.width * WALKERS_PER_PIXEL;
